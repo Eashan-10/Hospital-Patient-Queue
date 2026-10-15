@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Ward Queue{% endblock %}
+{% block heading %}Manage Patients{% endblock %}
+{% block subheading %}Register new arrivals and update existing records.{% endblock %}
+{% block content %}
+<section id="manage" class="panel">
+  <div class="grid-layout">
+    <form id="form" class="card">
+      <h2 id="form-title">Register a patient</h2>
+      <input type="hidden" id="pid">
+      {% set p = 'f' %}{% include "_fields.html" %}
+      <div class="actions"><button class="primary" id="save">Register patient</button><button type="button" id="cancel" hidden>Cancel edit</button></div>
+      <div id="saved"></div>
+    </form>
+    <div class="card">
+      <h2>At a glance</h2>
+      <div class="mini-stats">
+        <div class="mini-stat"><strong id="stat-total">0</strong><span>Waiting</span></div>
+        <div class="mini-stat"><strong id="stat-critical">0</strong><span>Critical</span></div>
+        <div class="mini-stat"><strong id="stat-wait">–</strong><span>Longest wait</span></div>
+      </div>
+      <h3>Recently registered</h3>
+      <div id="recent" class="mini-list"></div>
+    </div>
+  </div>
+</section>
+
+<section id="search" class="panel" hidden>
+  <div class="card">
+    <label for="search-input">Patient ID or name</label>
+    <input id="search-input" type="search" placeholder="PT-2026-0001, 0001 or a name" autocomplete="off">
+    <div class="scroll inner"><table><thead><tr><th>ID</th><th>Name</th><th>Age / Gender</th><th>Urgency</th><th>Rank</th><th>Actions</th></tr></thead><tbody id="search-tbody"></tbody></table></div>
+  </div>
+</section>
+
+<section id="queue" class="panel" hidden>
+  <div class="bar"><h2>Waiting now <span id="count"></span></h2>
+    <div class="actions"><button id="refresh">Refresh</button><button class="primary" id="next">Call next patient</button></div></div>
+  <div class="scroll"><table><thead><tr><th>Rank</th><th>Name</th><th>ID</th><th>Age</th><th>Gender</th><th>Urgency</th></tr></thead><tbody id="rows"></tbody></table></div>
+  <p id="empty" class="muted" hidden>No one is waiting. Register a patient under Manage Patients.</p>
+</section>
+{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='app.js') }}"></script>{% endblock %}
