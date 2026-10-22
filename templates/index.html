@@ -1,43 +1,305 @@
-{% extends "base.html" %}
-{% block title %}Ward Queue{% endblock %}
-{% block heading %}Manage Patients{% endblock %}
-{% block subheading %}Register new arrivals and update existing records.{% endblock %}
-{% block content %}
-<section id="manage" class="panel">
-  <div class="grid-layout">
-    <form id="form" class="card">
-      <h2 id="form-title">Register a patient</h2>
-      <input type="hidden" id="pid">
-      {% set p = 'f' %}{% include "_fields.html" %}
-      <div class="actions"><button class="primary" id="save">Register patient</button><button type="button" id="cancel" hidden>Cancel edit</button></div>
-      <div id="saved"></div>
-    </form>
-    <div class="card">
-      <h2>At a glance</h2>
-      <div class="mini-stats">
-        <div class="mini-stat"><strong id="stat-total">0</strong><span>Waiting</span></div>
-        <div class="mini-stat"><strong id="stat-critical">0</strong><span>Critical</span></div>
-        <div class="mini-stat"><strong id="stat-wait">–</strong><span>Longest wait</span></div>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ward Queue</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <script>
+    /* Pick the view before first paint so the profile page never flashes the tabs. */
+    if (/^\/patient\/.+/.test(location.pathname.replace(/\/+$/, ""))) {
+      document.documentElement.setAttribute("data-view", "profile");
+    }
+  </script>
+</head>
+<body>
+  <a class="skip" href="#view">Skip to content</a>
+
+  <div class="app">
+    <aside class="sidebar">
+      <a class="brand" href="/">
+        <span class="mark" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 4v16M4 12h16"/></svg>
+        </span>
+        <span class="brand-text">Ward Queue<small>Patient management</small></span>
+      </a>
+
+      <nav class="nav" aria-label="Sections">
+        <a href="/#manage" data-nav="manage">
+          <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          Manage Patients
+        </a>
+        <a href="/#search" data-nav="search">
+          <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          Search Patient
+        </a>
+        <a href="/#queue" data-nav="queue">
+          <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6M9 16h4"/></svg>
+          Current Queue
+        </a>
+      </nav>
+
+      <div class="side-card">
+        <span class="side-card-eyebrow">Triage rule</span>
+        <p class="side-foot">Most urgent first. Equal urgency is seen in order of arrival.</p>
       </div>
-      <h3>Recently registered</h3>
-      <div id="recent" class="mini-list"></div>
+    </aside>
+
+    <div class="main">
+      <header class="page-head">
+        <div class="page-head-inner">
+          <div class="page-head-copy">
+            <h1 id="view-title">Manage Patients</h1>
+            <p id="view-subtitle">Register new arrivals and update existing records.</p>
+          </div>
+          <span class="clock" id="live-clock" aria-hidden="true"></span>
+        </div>
+      </header>
+
+      <main class="view" id="view">
+        <!-- ===== Tabs view (URL: /) ===== -->
+        <div id="tabs-view">
+
+          <section id="manage" class="panel">
+            <div class="grid-layout">
+              <form id="form" class="card form-card">
+                <div class="card-head">
+                  <span class="card-ico" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></span>
+                  <div><h2 id="form-title">Register a patient</h2><p class="card-sub">Fields marked <span class="req">*</span> are required.</p></div>
+                </div>
+                <input type="hidden" id="pid">
+
+                <label class="field" for="f-name">
+                  <span class="field-label">Full name <span class="req" aria-hidden="true">*</span></span>
+                  <input id="f-name" name="f-name" type="text" required maxlength="80" autocomplete="off" placeholder="e.g. Asha Rao">
+                </label>
+                <div class="field-row">
+                  <label class="field" for="f-age">
+                    <span class="field-label">Age <span class="req" aria-hidden="true">*</span></span>
+                    <input id="f-age" name="f-age" type="number" min="0" max="130" required placeholder="0–130">
+                  </label>
+                  <label class="field" for="f-gender">
+                    <span class="field-label">Gender</span>
+                    <select id="f-gender" name="f-gender"><option>Female</option><option>Male</option><option>Other</option></select>
+                  </label>
+                </div>
+                <fieldset class="urg">
+                  <legend>Urgency <span class="req" aria-hidden="true">*</span></legend>
+                  <div class="chips">
+                    <label class="chip u1"><input type="radio" name="f-urg" value="1"><span><b>1</b><span class="chip-label">Minor</span></span></label>
+                    <label class="chip u2"><input type="radio" name="f-urg" value="2"><span><b>2</b><span class="chip-label">Low</span></span></label>
+                    <label class="chip u3"><input type="radio" name="f-urg" value="3" checked><span><b>3</b><span class="chip-label">Moderate</span></span></label>
+                    <label class="chip u4"><input type="radio" name="f-urg" value="4"><span><b>4</b><span class="chip-label">High</span></span></label>
+                    <label class="chip u5"><input type="radio" name="f-urg" value="5"><span><b>5</b><span class="chip-label">Critical</span></span></label>
+                  </div>
+                  <p class="field-hint">1 = Minor  5 = Critical. Higher urgency is seen first.</p>
+                </fieldset>
+                <label class="field" for="f-notes">
+                  <span class="field-label">Notes <span class="opt">(optional)</span><span class="counter" data-count-for="f-notes">0 / 500</span></span>
+                  <textarea id="f-notes" name="f-notes" rows="3" maxlength="500" placeholder="Allergies, symptoms, triage remarks…"></textarea>
+                </label>
+
+                <div class="actions form-actions">
+                  <button class="primary" id="save">Register patient</button>
+                  <button type="button" id="cancel" hidden>Cancel edit</button>
+                </div>
+                <div id="saved" aria-live="polite"></div>
+              </form>
+
+              <div class="card">
+                <div class="card-head">
+                  <span class="card-ico" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-5 3 3 5-7"/></svg></span>
+                  <div><h2>At a glance</h2><p class="card-sub">Live snapshot of the ward.</p></div>
+                </div>
+                <div class="mini-stats">
+                  <div class="mini-stat">
+                    <span class="mini-ico" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></span>
+                    <strong id="stat-total">0</strong><span class="mini-label">Waiting</span>
+                  </div>
+                  <div class="mini-stat crit">
+                    <span class="mini-ico" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a9 9 0 0 0-9 9c0 4 2.5 7 5 8.5V22h8v-2.5C18.5 18 21 15 21 11a9 9 0 0 0-9-9Z"/><path d="M12 8v4M12 15h.01"/></svg></span>
+                    <strong id="stat-critical">0</strong><span class="mini-label">Critical</span>
+                  </div>
+                  <div class="mini-stat">
+                    <span class="mini-ico" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span>
+                    <strong id="stat-wait">–</strong><span class="mini-label">Longest wait</span>
+                  </div>
+                </div>
+                <h3 class="mini-heading">Recently registered</h3>
+                <div id="recent" class="mini-list"></div>
+              </div>
+            </div>
+          </section>
+
+          <section id="search" class="panel" hidden>
+            <div class="card">
+              <div class="card-head">
+                <span class="card-ico" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg></span>
+                <div><h2>Find a patient</h2><p class="card-sub">Search by name, full ID (PT-2026-0001) or just the number.</p></div>
+              </div>
+              <div class="search-bar">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                <label class="sr-only" for="search-input">Patient ID or name</label>
+                <input id="search-input" type="search" placeholder="PT-2026-0001, 0001 or a name" autocomplete="off">
+              </div>
+              <div class="scroll inner">
+                <table>
+                  <thead><tr><th>ID</th><th>Name</th><th>Age / Gender</th><th>Urgency</th><th>Rank</th><th>Actions</th></tr></thead>
+                  <tbody id="search-tbody"></tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+
+          <section id="queue" class="panel" hidden>
+            <div class="card queue-card">
+              <div class="bar">
+                <div class="bar-title">
+                  <h2>Waiting now <span id="count" class="count-pill">0</span></h2>
+                  <p class="card-sub">Ordered by urgency, then earliest arrival.</p>
+                </div>
+                <div class="actions">
+                  <div class="density" role="group" aria-label="Row density">
+                    <button type="button" data-density="comfortable" class="on" aria-pressed="true">Comfortable</button>
+                    <button type="button" data-density="compact" aria-pressed="false">Compact</button>
+                  </div>
+                  <button id="refresh" class="icon-btn" type="button">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.6-6.4M21 3v6h-6"/></svg>
+                    Refresh
+                  </button>
+                  <button class="primary" id="next" type="button">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+                    Call next patient
+                  </button>
+                </div>
+              </div>
+
+              <div class="legend" aria-label="Urgency legend">
+                <span class="legend-item u1"><i></i>1 Minor</span>
+                <span class="legend-item u2"><i></i>2 Low</span>
+                <span class="legend-item u3"><i></i>3 Moderate</span>
+                <span class="legend-item u4"><i></i>4 High</span>
+                <span class="legend-item u5"><i></i>5 Critical</span>
+              </div>
+
+              <div class="scroll">
+                <table>
+                  <thead><tr><th>Rank</th><th>Name</th><th>ID</th><th>Age</th><th>Gender</th><th>Urgency</th></tr></thead>
+                  <tbody id="rows"></tbody>
+                </table>
+              </div>
+
+              <div id="empty" class="empty" hidden>
+                <svg width="120" height="88" viewBox="0 0 120 88" fill="none" aria-hidden="true">
+                  <ellipse cx="60" cy="74" rx="42" ry="7" fill="#e2ecfb"/>
+                  <rect x="26" y="20" width="68" height="48" rx="10" fill="#f1f7ff" stroke="#c6d6ee" stroke-width="2"/>
+                  <rect x="38" y="32" width="44" height="6" rx="3" fill="#cfe0f5"/>
+                  <rect x="38" y="46" width="30" height="6" rx="3" fill="#dbe8f8"/>
+                  <circle cx="92" cy="24" r="13" fill="#0ea5e9"/>
+                  <path d="M92 18v12M86 24h12" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/>
+                </svg>
+                <h3>The queue is clear</h3>
+                <p class="muted">No one is waiting right now. New arrivals will appear here instantly.</p>
+                <a class="btn primary" href="/#manage">Register a patient</a>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <!-- ===== Profile view (URL: /patient/<id>) ===== -->
+        <div id="profile-view">
+          <a class="back" href="/#queue">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
+            Back to queue
+          </a>
+          <div id="profile" data-id="">
+            <div class="card skeleton-card" aria-hidden="true">
+              <span class="sk line w40"></span>
+              <span class="sk line w70"></span>
+              <span class="sk block"></span>
+            </div>
+          </div>
+        </div>
+      </main>
     </div>
   </div>
-</section>
 
-<section id="search" class="panel" hidden>
-  <div class="card">
-    <label for="search-input">Patient ID or name</label>
-    <input id="search-input" type="search" placeholder="PT-2026-0001, 0001 or a name" autocomplete="off">
-    <div class="scroll inner"><table><thead><tr><th>ID</th><th>Name</th><th>Age / Gender</th><th>Urgency</th><th>Rank</th><th>Actions</th></tr></thead><tbody id="search-tbody"></tbody></table></div>
-  </div>
-</section>
+  <!-- Duplicate confirmation dialog -->
+  <dialog id="dupdlg" aria-labelledby="dup-title">
+    <form method="dialog" class="dlg">
+      <div class="dlg-head">
+        <span class="dlg-ico warn" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/></svg>
+        </span>
+        <div>
+          <h2 id="dup-title">Possible duplicate</h2>
+          <p class="dlg-sub">This looks like someone already in the queue.</p>
+        </div>
+      </div>
+      <p id="dup-text"></p>
+      <div class="actions">
+        <a id="dup-link" class="btn">View existing profile</a>
+        <button value="cancel">Cancel</button>
+        <button value="force" id="dup-go" class="primary">Continue</button>
+      </div>
+    </form>
+  </dialog>
 
-<section id="queue" class="panel" hidden>
-  <div class="bar"><h2>Waiting now <span id="count"></span></h2>
-    <div class="actions"><button id="refresh">Refresh</button><button class="primary" id="next">Call next patient</button></div></div>
-  <div class="scroll"><table><thead><tr><th>Rank</th><th>Name</th><th>ID</th><th>Age</th><th>Gender</th><th>Urgency</th></tr></thead><tbody id="rows"></tbody></table></div>
-  <p id="empty" class="muted" hidden>No one is waiting. Register a patient under Manage Patients.</p>
-</section>
-{% endblock %}
-{% block scripts %}<script src="{{ url_for('static', filename='app.js') }}"></script>{% endblock %}
+  <!-- Profile edit dialog -->
+  <dialog id="editdlg" aria-labelledby="edit-title">
+    <form id="editform" class="dlg">
+      <div class="dlg-head">
+        <span class="dlg-ico" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+        </span>
+        <div>
+          <h2 id="edit-title">Edit patient</h2>
+          <p class="dlg-sub">The queue re-ranks automatically after saving.</p>
+        </div>
+      </div>
+
+      <label class="field" for="e-name">
+        <span class="field-label">Full name <span class="req" aria-hidden="true">*</span></span>
+        <input id="e-name" name="e-name" type="text" required maxlength="80" autocomplete="off" placeholder="e.g. Asha Rao">
+      </label>
+      <div class="field-row">
+        <label class="field" for="e-age">
+          <span class="field-label">Age <span class="req" aria-hidden="true">*</span></span>
+          <input id="e-age" name="e-age" type="number" min="0" max="130" required placeholder="0–130">
+        </label>
+        <label class="field" for="e-gender">
+          <span class="field-label">Gender</span>
+          <select id="e-gender" name="e-gender"><option>Female</option><option>Male</option><option>Other</option></select>
+        </label>
+      </div>
+      <fieldset class="urg">
+        <legend>Urgency <span class="req" aria-hidden="true">*</span></legend>
+        <div class="chips">
+          <label class="chip u1"><input type="radio" name="e-urg" value="1"><span><b>1</b><span class="chip-label">Minor</span></span></label>
+          <label class="chip u2"><input type="radio" name="e-urg" value="2"><span><b>2</b><span class="chip-label">Low</span></span></label>
+          <label class="chip u3"><input type="radio" name="e-urg" value="3" checked><span><b>3</b><span class="chip-label">Moderate</span></span></label>
+          <label class="chip u4"><input type="radio" name="e-urg" value="4"><span><b>4</b><span class="chip-label">High</span></span></label>
+          <label class="chip u5"><input type="radio" name="e-urg" value="5"><span><b>5</b><span class="chip-label">Critical</span></span></label>
+        </div>
+        <p class="field-hint">1 = Minor  5 = Critical. Higher urgency is seen first.</p>
+      </fieldset>
+      <label class="field" for="e-notes">
+        <span class="field-label">Notes <span class="opt">(optional)</span><span class="counter" data-count-for="e-notes">0 / 500</span></span>
+        <textarea id="e-notes" name="e-notes" rows="3" maxlength="500" placeholder="Allergies, symptoms, triage remarks…"></textarea>
+      </label>
+
+      <div class="actions">
+        <button type="button" id="e-cancel">Cancel</button>
+        <button class="primary">Save changes</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div id="toast" role="status" aria-live="polite"></div>
+
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

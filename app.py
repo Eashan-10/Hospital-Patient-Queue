@@ -79,7 +79,8 @@ def conflict(pid):
 def index(): return render_template("index.html")
 
 @app.get("/patient/<pid>")
-def profile(pid): return render_template("profile.html", pid=pid)
+def profile(pid): return render_template("index.html")
+
 
 # ---- API ----
 @app.post("/api/patients")
