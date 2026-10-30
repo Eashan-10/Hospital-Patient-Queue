@@ -1,5 +1,8 @@
 """Indexed max-heap: O(log n) insert / extract-max / update / remove, O(1) lookup."""
 
+from collections import deque
+from typing import List, Tuple
+
 class PatientHeap:
     def __init__(self):
         self.a = []      # list of (urgency, arrival_seq, patient_id)
@@ -72,3 +75,49 @@ class PatientHeap:
     def ranked_ids(self):
         """Full queue order without mutating the heap (sorts a copy)."""
         return [x[2] for x in sorted(self.a, key=lambda t: (-t[0], t[1]))]
+
+class ShortestPath:
+    # Main Aim is to find the shortest path for an ambulance to go from place A to place B
+    """
+    Some pre-defined places are
+    - Hospital - Dadar at (0, 1)
+    - Kurla at (0, 4)
+    - Kalyan at (9, 8)
+    - Andheri at (0, 8)
+    - Dahisar at (8, 5)
+    - Thane at (3, 6)
+    """
+    def __init__(self):
+        self.places = {"Hospital - Dadar": (0, 1), "Kurla": (0, 4), "Kalyan": (9, 8), "Andheri": (0, 8), "Dahisar": (8, 5), "Thane": (3, 6)}
+        self.roads = [[0, 1, 0, 1, 1, 1, 1, 1, 1],
+            [1, 1, 1, 1, 0, 0, 0, 1, 0],
+            [1, 1, 0, 1, 1, 1, 1, 1, 0],
+            [0, 1, 0, 1, 0, 0, 1, 0, 0],
+            [1, 1, 0, 1, 0, 0, 1, 1, 0],
+            [1, 0, 0, 1, 1, 1, 0, 1, 0],
+            [1, 1, 0, 1, 0, 1, 1, 1, 0],
+            [0, 1, 0, 1, 0, 0, 0, 0, 0],
+            [0, 1, 1, 1, 1, 1, 0, 0, 0],
+            [1, 1, 1, 0, 0, 1, 1, 1, 1]]
+    def dijkstra(self, source: Tuple[int, int], destination: Tuple[int, int]) -> List[Tuple[int, int]]:
+        m, n = len(self.roads), len(self.roads[0])
+        i0, j0 = source[0], source[1]
+        iF, jF = destination[0], destination[1]
+        
+        directions = [(-1, 0), (1, 0), (0, -1), (0, 1)] # Up, down, left, right
+        queue = deque([(i0, j0, [(i0, j0)])])
+        visited = {(i0, j0)}
+        while queue:
+            r, c, path = queue.popleft()
+            
+            if (r, c) == (iF, jF):
+                return path
+                
+            for dr, dc in directions:
+                nr, nc = r + dr, c + dc
+                
+                # Move if cell is in bounds, is a path == 1, and not yet visited
+                if 0 <= nr < m and 0 <= nc < n and self.roads[nr][nc] == 1 and (nr, nc) not in visited:
+                    visited.add((nr, nc))
+                    queue.append((nr, nc, path + [(nr, nc)]))
+        return []
