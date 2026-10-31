@@ -1,2 +1,8 @@
 flask
 matplotlib
+pymupdf
+pandas
+numpy
+sklearn
+seaborn
+matplotlib
