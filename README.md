@@ -1,4 +1,4 @@
-# Smart Hospital Management System - 1.0.0
+# MediRoute: Intelligent Hospital Management System
 
 Solves following problems:
 
