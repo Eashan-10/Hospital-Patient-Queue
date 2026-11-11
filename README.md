@@ -26,6 +26,12 @@ flowchart TD
     E ==> EndNode([Output the priority in range 1-5 to the heap used in the flask server backend])
 ```
 
+## Improved Model Stats:
+
+- Mean Squared Error (MSE): 0.2220
+- R² Score (Coefficient of Determination): 0.7867
+- Recall: 70.3454%
+
 ## Ambulance Shortest Path Recommending System (BFS + Dijkstra)
 
 ```mermaid
